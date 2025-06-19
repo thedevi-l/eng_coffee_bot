@@ -1,10 +1,9 @@
 import sqlite3
-from typing import Optional, Dict, List
-
+from typing import Optional, Dict
 
 class Database:
     def __init__(self):
-        self.conn = sqlite3.connect('users.db', check_same_thread=False)
+        self.conn = sqlite3.connect("users.db", check_same_thread=False)
         self.create_tables()
 
     def create_tables(self):
@@ -13,10 +12,10 @@ class Database:
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
                 username TEXT,
-                name TEXT,
-                level TEXT,
-                interests TEXT,
-                goal TEXT
+                name TEXT NOT NULL,
+                level TEXT NOT NULL,
+                interests TEXT NOT NULL,
+                goal TEXT NOT NULL
             )
         """)
         self.conn.commit()
@@ -24,7 +23,8 @@ class Database:
     def save_user(self, user_data: Dict):
         cursor = self.conn.cursor()
         cursor.execute("""
-            INSERT OR REPLACE INTO users (user_id, username, name, level, interests, goal)
+            INSERT OR REPLACE INTO users
+            (user_id, username, name, level, interests, goal)
             VALUES (?, ?, ?, ?, ?, ?)
         """, (
             user_data['user_id'],
@@ -51,18 +51,20 @@ class Database:
             }
         return None
 
-    def find_best_match(self, user_id: int, level: str, interests: str) -> Optional[Dict]:
+    def find_match(self, user_id: int, interests: str, level: str) -> Optional[Dict]:
         cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE user_id != ?", (user_id,))
-        candidates = cursor.fetchall()
+        cursor.execute("""
+            SELECT * FROM users
+            WHERE user_id != ? AND level = ?
+        """, (user_id, level))
+        rows = cursor.fetchall()
 
+        user_interests = set(map(str.strip, interests.lower().split(',')))
         best_score = -1
         best_match = None
-        user_interests = set(i.strip().lower() for i in interests.split(","))
-
-        for row in candidates:
-            other_interests = set(i.strip().lower() for i in row[4].split(","))
-            score = (row[3] == level) + len(user_interests & other_interests)
+        for row in rows:
+            other_interests = set(map(str.strip, row[4].lower().split(',')))
+            score = len(user_interests & other_interests)
             if score > best_score:
                 best_score = score
                 best_match = row
@@ -77,20 +79,4 @@ class Database:
                 'goal': best_match[5]
             }
         return None
-
-    def get_all_users(self) -> List[Dict]:
-        cursor = self.conn.cursor()
-        cursor.execute("SELECT * FROM users")
-        rows = cursor.fetchall()
-        return [
-            {
-                'user_id': row[0],
-                'username': row[1],
-                'name': row[2],
-                'level': row[3],
-                'interests': row[4],
-                'goal': row[5]
-            }
-            for row in rows
-        ]
 

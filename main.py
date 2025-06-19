@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 # Состояния анкеты
 NAME, LEVEL, INTERESTS, GOAL = range(4)
 
+
 class RandomCoffeeBot:
     def __init__(self):
         load_dotenv()
@@ -35,7 +36,8 @@ class RandomCoffeeBot:
         # Обработчики
         self.app.add_handler(CommandHandler("start", self.start))
         self.app.add_handler(CommandHandler("match", self.match_command))
-        self.app.add_handler(CallbackQueryHandler(self.handle_buttons, pattern="^start_form$|^match$"))
+        self.app.add_handler(CallbackQueryHandler(self.start_form, pattern="^start_form$"))
+        self.app.add_handler(CallbackQueryHandler(self.handle_match, pattern="^match$"))
 
         conv_handler = ConversationHandler(
             entry_points=[CallbackQueryHandler(self.start_form, pattern="^start_form$")],
@@ -49,7 +51,7 @@ class RandomCoffeeBot:
         )
         self.app.add_handler(conv_handler)
 
-        # Планировщик еженедельной рассылки
+        # Планировщик
         scheduler = BackgroundScheduler()
         scheduler.add_job(lambda: asyncio.run(self.weekly_match()), 'interval', weeks=1)
         scheduler.start()
@@ -62,14 +64,8 @@ class RandomCoffeeBot:
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    async def handle_buttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        query = update.callback_query
-        await query.answer()
-
-        if query.data == "match":
-            await self.match_user(query.from_user.id, context)
-
     async def start_form(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Запуск анкеты после нажатия кнопки"""
         query = update.callback_query
         await query.answer()
         await query.message.reply_text("Как тебя зовут?")
@@ -77,7 +73,7 @@ class RandomCoffeeBot:
 
     async def get_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['name'] = update.message.text
-        await update.message.reply_text("📚 Какой у тебя уровень английского? (A2, B1, Intermediate и т.д.)")
+        await update.message.reply_text("📚 Какой у тебя уровень английского?")
         return LEVEL
 
     async def get_level(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -111,6 +107,11 @@ class RandomCoffeeBot:
         )
         return ConversationHandler.END
 
+    async def handle_match(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        query = update.callback_query
+        await query.answer()
+        await self.match_user(query.from_user.id, context)
+
     async def match_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self.match_user(update.message.from_user.id, context)
 
@@ -135,11 +136,11 @@ class RandomCoffeeBot:
 
     async def weekly_match(self):
         for user in self.db.get_all_users():
-            dummy_context = ContextTypes.DEFAULT_TYPE
             await self.match_user(user['user_id'], self.app)
 
     def run(self):
         self.app.run_polling()
+
 
 if __name__ == "__main__":
     bot = RandomCoffeeBot()

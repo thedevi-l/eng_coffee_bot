@@ -72,37 +72,37 @@ class RandomCoffeeBot:
         return NAME
 
     async def get_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.user_data['name'] = update.message.text
-        await update.message.reply_text("📚 Какой у тебя уровень английского?")
+        context.user_data['name'] = update.message.text.strip()
+        await update.message.reply_text("📚 Какой у тебя уровень английского? (A1, A2, B1, B2, C1, C2)")
         return LEVEL
 
     async def get_level(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.user_data['level'] = update.message.text
-        await update.message.reply_text("🎯 Какие у тебя интересы? (через запятую)")
+        context.user_data['level'] = update.message.text.strip()
+        await update.message.reply_text("🎯 Какие у тебя интересы? (перечисли через запятую)")
         return INTERESTS
 
     async def get_interests(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.user_data['interests'] = update.message.text
-        await update.message.reply_text("🗣️ Какая твоя цель в изучении английского?")
+        context.user_data['interests'] = update.message.text.strip()
+        await update.message.reply_text("🗣️ Какая у тебя цель в изучении английского?")
         return GOAL
 
     async def get_goal(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        context.user_data['goal'] = update.message.text
+        context.user_data['goal'] = update.message.text.strip()
 
         user_data = {
             'user_id': update.message.from_user.id,
-            'username': update.message.from_user.username,
+            'username': update.message.from_user.username or '',
             'name': context.user_data['name'],
             'level': context.user_data['level'],
             'interests': context.user_data['interests'],
             'goal': context.user_data['goal']
         }
-
         self.db.save_user(user_data)
 
+        # Показать кнопку для подбора собеседника
         keyboard = [[InlineKeyboardButton("🔍 Найти собеседника", callback_data="match")]]
         await update.message.reply_text(
-            "✅ Анкета сохранена! Нажми кнопку ниже, чтобы найти собеседника:",
+            "✅ Анкета сохранена!\nТеперь ты можешь найти собеседника.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return ConversationHandler.END
@@ -118,13 +118,13 @@ class RandomCoffeeBot:
     async def match_user(self, user_id, context: ContextTypes.DEFAULT_TYPE):
         user = self.db.get_user(user_id)
         if not user:
-            await context.bot.send_message(user_id, "Сначала заполни анкету через /start")
+            await context.bot.send_message(user_id, "Сначала заполни анкету через /start.")
             return
 
         match = self.db.find_best_match(user_id, user['level'], user['interests'])
         if match:
             text = (
-                f"🎉 Найден собеседник!\n\n"
+                f"🎉 Мы нашли для тебя собеседника!\n\n"
                 f"Имя: {match['name']}\n"
                 f"Уровень: {match['level']}\n"
                 f"Интересы: {match['interests']}\n"
@@ -145,3 +145,4 @@ class RandomCoffeeBot:
 if __name__ == "__main__":
     bot = RandomCoffeeBot()
     bot.run()
+

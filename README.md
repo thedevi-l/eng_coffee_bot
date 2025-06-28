@@ -22,6 +22,10 @@ This version is optimized for **deployment on Replit**.
 | `requirements.txt` | Python dependencies                      |
 | `keep_alive.sh` | Keeps the bot running continuously           |
 
+### ⏰ Weekly Auto-Matching
+
+The bot uses APScheduler to automatically match and message users every Saturday based on similar interests and level.
+
 #### 🚀 How to Deploy on Replit
 
 ### 1. **Create a new Python Repl**
@@ -49,8 +53,4 @@ Click the ⚙️ “⋮” next to `main.py` → "Show hidden files" → go to `
 
 ```replit
 
-##### ⏰ Weekly Auto-Matching
 
-The bot uses APScheduler to automatically match and message users every Saturday based on similar interests and level.
-
-run = "bash keep_alive.sh"
